@@ -108,6 +108,9 @@ func (app *exportProxyApp) Run() {
 			panic(err)
 		}
 	} else {
+		// Log that it's using http
+		log.Log.Info("Using HTTP instead of HTTPS")
+
 		if err := server.ListenAndServe(); err != nil {
 			panic(err)
 		}
