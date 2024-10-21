@@ -62,6 +62,7 @@ type exportProxyApp struct {
 	caManager       kvtls.ClientCAManager
 	exportStore     cache.Store
 	kubeVirtStore   cache.Store
+	useHTTP         bool
 }
 
 func NewExportProxyApp() service.Service {
@@ -76,6 +77,7 @@ func (app *exportProxyApp) AddFlags() {
 		"File containing the default x509 Certificate for HTTPS")
 	flag.StringVar(&app.tlsKeyFilePath, "tls-key-file", defaultTlsKeyFilePath,
 		"File containing the default x509 private key matching --tls-cert-file")
+	flag.BoolVar(&app.useHTTP, "use-http", false, "Use HTTP instead of HTTPS")
 }
 
 func (app *exportProxyApp) Run() {
@@ -93,16 +95,22 @@ func (app *exportProxyApp) Run() {
 	mux.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
-		Addr:      app.Address(),
-		Handler:   mux,
-		TLSConfig: appTLSConfig,
-		// Disable HTTP/2
-		// See CVE-2023-44487
-		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
+		Addr:    app.Address(),
+		Handler: mux,
 	}
 
-	if err := server.ListenAndServeTLS("", ""); err != nil {
-		panic(err)
+	if !app.useHTTP {
+		server.TLSConfig = appTLSConfig
+		// Disable HTTP/2
+		// See CVE-2023-44487
+		server.TLSNextProto = map[string]func(*http.Server, *tls.Conn, http.Handler){}
+		if err := server.ListenAndServeTLS("", ""); err != nil {
+			panic(err)
+		}
+	} else {
+		if err := server.ListenAndServe(); err != nil {
+			panic(err)
+		}
 	}
 }
 
