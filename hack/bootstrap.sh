@@ -37,8 +37,12 @@ function kubevirt::bootstrap::regenerate() {
         fi
         echo "Regenerating sandbox"
         cd ${KUBEVIRT_DIR}
-        rm ${SANDBOX_DIR} -rf
-        rm .bazeldnf/sandbox.bazelrc -f
+        if [ -d "${SANDBOX_DIR}" ]; then
+          rm -rf "${SANDBOX_DIR}"
+        fi
+        if [ -f ".bazeldnf/sandbox.bazelrc" ]; then
+          rm -f ".bazeldnf/sandbox.bazelrc"
+        fi
         # Run gazelle to ensure that nogo has all build files resolved and that we can bootstrap the env.
         # This is necessary since some steps remove the vendor build files and nogo would be broken then.
         KUBEVIRT_BOOTSTRAPPING=true bazel run --config=${ARCHITECTURE} //:gazelle -- -exclude vendor/google.golang.org/grpc --exclude cluster-up
